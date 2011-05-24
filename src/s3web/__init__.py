@@ -3,6 +3,7 @@ import os
 import os.path
 import ConfigParser
 
+from boto.s3.connection import S3Connection
 from progressbar import FileTransferSpeed, ETA, Bar, Percentage, ProgressBar
 
 import base
@@ -24,9 +25,16 @@ def main(config_file=False):
 
   (options, args) = parser.parse_args()
 
+  web_dir = '.'
+  if args:
+    web_dir = args[0]
+
   config = ConfigParser.SafeConfigParser()
-  #config.read(options.config)
+  config.read(options.config)
+  s3conn = S3Connection(config.get('s3web', 'api_key'), config.get('s3web', 'api_secret'))
 
-  web_bucket = base.WebBucketController(None, None, '.')
-  print web_bucket.local_keys
+  web_bucket = base.WebBucketController(s3conn, config.get('s3web', 'domain_name'), web_dir)
+  print web_bucket.url
 
+  web_bucket.upload()
+  
