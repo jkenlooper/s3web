@@ -52,10 +52,10 @@ class WebBucketController(object):
   def __init__(self, s3connection, domain_name, dir):
     self.s3connection = s3connection
     self.domain_name = domain_name
-    self.bucket = self.s3connection.get_bucket(''.join((BUCKET_PREFIX, self.domain_name)))
-    if not self.bucket:
-      print 'creating bucket'
-      self.bucket = self.s3connection.create_bucket(''.join((BUCKET_PREFIX, self.domain_name))) 
+    #self.bucket = self.s3connection.get_bucket(''.join((BUCKET_PREFIX, self.domain_name)))
+    #if not self.bucket:
+      #print 'creating bucket'
+    self.bucket = self.s3connection.create_bucket(''.join((BUCKET_PREFIX, self.domain_name))) 
     self.bucket.set_acl('public-read')
     self.bucket.configure_website('index.html', error_key='404.html')
 
