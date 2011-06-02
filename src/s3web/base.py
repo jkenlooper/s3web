@@ -6,23 +6,12 @@ import time
 import datetime
 import hashlib
 import ConfigParser
+import logging
+from mimetypes import types_map
 
 from boto.s3.key import Key
 
-from media import cType
-
-"""
-get a connection to the bucket
-  create bucket if not existing
-    setup bucket to be available to the web
-get a list of all files in local dir
-  filter out files not in the include list
-walk through all remote files and delete keys that aren't available locally
-compare hash of remote file and local file and remove from local list if the same
-upload all remaining files in local list
-  update hash in metadata of remote file
-
-"""
+log = logging.getLogger('s3web.base')
 
 INCLUDE_FILE_EXTENSIONS = set([
   '.html',
@@ -42,8 +31,6 @@ EXCLUDE_DIRECTORIES = set([
 EXCLUDE_FILES = set([
   ])
 
-BUCKET_PREFIX = 'wot-'
-
 def Property(func):
   """ http://adam.gomaa.us/blog/the-python-property-builtin/ """
   return property(**func())
@@ -52,10 +39,9 @@ class WebBucketController(object):
   def __init__(self, s3connection, domain_name, dir):
     self.s3connection = s3connection
     self.domain_name = domain_name
-    #self.bucket = self.s3connection.get_bucket(''.join((BUCKET_PREFIX, self.domain_name)))
     #if not self.bucket:
       #print 'creating bucket'
-    self.bucket = self.s3connection.create_bucket(''.join((BUCKET_PREFIX, self.domain_name))) 
+    self.bucket = self.s3connection.create_bucket(self.domain_name) 
     self.bucket.set_acl('public-read')
     self.bucket.configure_website('index.html', error_key='404.html')
 
@@ -109,7 +95,7 @@ class WebBucketController(object):
     doc = "list of local files/directories returned as key names"
     def fget(self):
       keys = set()
-      for root, dir, file_names in os.walk(self.dir, topdown=True):
+      for root, dir, file_names in os.walk(self.dir, topdown=True, followlinks=True):
         if root not in self.exclude_directories:
           for f in file_names:
             f_path = os.path.join(root, f)
@@ -121,8 +107,10 @@ class WebBucketController(object):
           filtered_dir = dir
           for d in dir:
             d_path = os.path.join(root, d)
+            log.debug('d_path: %s', d_path)
             for ex in self.exclude_directories:
               if d_path[:len(ex)] == ex:
+                log.debug('removing %s', d)
                 filtered_dir.remove(d)
           for d in filtered_dir:
             d_path = os.path.join(root, d)
@@ -139,10 +127,13 @@ class WebBucketController(object):
         self.bucket.delete_key(remote_key.name)
       else:
         local_file_path = os.path.join(self.dir, remote_key.name)
+        print 'local_file_path', local_file_path
         if os.path.isfile(local_file_path):
           lf = open(local_file_path, 'r')
           local_hash = remote_key.compute_md5(lf)[0]
-          if local_hash in remote_key.etag: # comparing md5 and etag; this may fail
+          #local_hash = hashlib.md5(lf.read()).hexdigest()
+          print 'comparing_keys:', local_hash, remote_key.etag
+          if local_hash == remote_key.etag.replace('"',''): # comparing md5 and etag; this may fail
             local_list.remove(remote_key.name)
 
 
@@ -160,7 +151,7 @@ class WebBucketController(object):
         (base_name, ext) = os.path.splitext(local_file_path)
         local_hash_tuple = k.compute_md5(lf)
         k.set_contents_from_file(lf, md5=local_hash_tuple)
-        k.set_metadata('Content-Type', cType.get(ext, 'application/octet-stream'))
+        k.set_metadata('Content-Type', types_map.get(ext, 'application/octet-stream'))
         k.set_metadata('md5-hex', local_hash_tuple[0])
         k.set_acl('public-read')
         lf.close()
