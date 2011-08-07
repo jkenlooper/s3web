@@ -20,6 +20,8 @@ INCLUDE_FILE_EXTENSIONS = set([
   '.png',
   '.gif',
   '.jpg',
+  '.bmp',
+  '.ico',
   '.pdf',
   '.doc'
   ])
@@ -74,7 +76,8 @@ class WebBucketController(object):
     def fset(self, files):
       fs = []
       for f in files:
-        fs.extend(glob(os.path.join(self.dir, f)))
+        if f != "":
+          fs.extend(glob(os.path.join(self.dir, f)))
       self._exclude_files = set(fs)
     return locals()
 
@@ -86,7 +89,9 @@ class WebBucketController(object):
     def fset(self, dirs):
       ds = []
       for d in dirs:
-        ds.extend(glob(d))
+        if d != "":
+          d = os.path.join(self.dir, d)
+          ds.extend(glob(d))
       self._exclude_directories = set(ds)
     return locals()
 
@@ -109,6 +114,7 @@ class WebBucketController(object):
             d_path = os.path.join(root, d)
             log.debug('d_path: %s', d_path)
             for ex in self.exclude_directories:
+              log.debug('ex = %s', ex)
               if d_path[:len(ex)] == ex:
                 log.debug('removing %s', d)
                 filtered_dir.remove(d)
