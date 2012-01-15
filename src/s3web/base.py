@@ -20,6 +20,7 @@ INCLUDE_FILE_EXTENSIONS = set([
   '.png',
   '.gif',
   '.jpg',
+  '.jpeg',
   '.bmp',
   '.ico',
   '.pdf',
