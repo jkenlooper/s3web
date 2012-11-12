@@ -24,6 +24,12 @@ INCLUDE_FILE_EXTENSIONS = set([
   '.bmp',
   '.ico',
   '.pdf',
+  '.eot',
+  '.svg',
+  '.ttf',
+  '.woff',
+  '.bundle',
+  '.txt',
   '.doc'
   ])
 
@@ -134,12 +140,12 @@ class WebBucketController(object):
         self.bucket.delete_key(remote_key.name)
       else:
         local_file_path = os.path.join(self.dir, remote_key.name)
-        print 'local_file_path', local_file_path
+        #print 'local_file_path', local_file_path
         if os.path.isfile(local_file_path):
           lf = open(local_file_path, 'r')
           local_hash = remote_key.compute_md5(lf)[0]
           #local_hash = hashlib.md5(lf.read()).hexdigest()
-          print 'comparing_keys:', local_hash, remote_key.etag
+          #print 'comparing_keys:', local_hash, remote_key.etag
           if local_hash == remote_key.etag.replace('"',''): # comparing md5 and etag; this may fail
             local_list.remove(remote_key.name)
 
